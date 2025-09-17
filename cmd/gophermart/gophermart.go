@@ -39,15 +39,7 @@ func main() {
 	logger := getLogger()
 	conf := getConfig()
 
-	db, err := sql.Open("pgx", conf.DatabaseDSN)
-	if err != nil {
-		logger.Fatal(err)
-	}
-
-	err = execDBMigrations(db)
-	if err != nil {
-		logger.Fatal(err)
-	}
+	db := createDBConnection(logger, conf)
 
 	r := chi.NewRouter()
 	r.Use(
@@ -101,13 +93,16 @@ func main() {
 		go accrual.GetAccruals(context.Background())
 	})
 
-	quitChan := make(chan os.Signal, 1)
-	signal.Notify(quitChan, syscall.SIGINT, syscall.SIGTERM)
-
 	server := &http.Server{
 		Addr:    conf.Host,
 		Handler: r,
 	}
+
+	ctx, stop := signal.NotifyContext(context.Background(),
+		os.Interrupt,
+		syscall.SIGTERM,
+	)
+	defer stop()
 
 	go func() {
 		logger.Info(fmt.Sprintf("start server on %s", server.Addr))
@@ -118,7 +113,7 @@ func main() {
 		}
 	}()
 
-	<-quitChan
+	<-ctx.Done()
 
 	logger.Info("shutting down server...")
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -167,4 +162,18 @@ func execDBMigrations(db *sql.DB) error {
 	}
 
 	return nil
+}
+
+func createDBConnection(logger *zap.SugaredLogger, conf configInfrastructure.Config) *sql.DB {
+	db, err := sql.Open("pgx", conf.DatabaseDSN)
+	if err != nil {
+		logger.Fatal(err)
+	}
+
+	err = execDBMigrations(db)
+	if err != nil {
+		logger.Fatal(err)
+	}
+
+	return db
 }

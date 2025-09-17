@@ -1,3 +1,4 @@
+begin;
 create table if not exists orders(
     id uuid primary key,
     number text not null unique,
@@ -7,3 +8,4 @@ create table if not exists orders(
 );
 
 CREATE INDEX if not exists idx_orders_user_id ON orders(user_id);
+commit;

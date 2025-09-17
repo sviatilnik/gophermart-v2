@@ -1,3 +1,4 @@
+begin;
 CREATE TABLE if not exists refresh_tokens (
     token      TEXT PRIMARY KEY,
     user_id    UUID NOT NULL,
@@ -6,3 +7,4 @@ CREATE TABLE if not exists refresh_tokens (
 );
 
 CREATE INDEX if not exists idx_refresh_tokens_token ON refresh_tokens(token);
+commit;

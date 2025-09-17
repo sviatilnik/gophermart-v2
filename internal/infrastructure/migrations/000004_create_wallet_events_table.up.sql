@@ -1,3 +1,4 @@
+begin;
 CREATE TABLE wallet_events (
       event_id      TEXT PRIMARY KEY,
       aggregate_id  TEXT NOT NULL,
@@ -11,3 +12,4 @@ CREATE TABLE wallet_events (
 
 CREATE INDEX idx_wallet_events_aggregate ON wallet_events (aggregate_id);
 CREATE INDEX idx_wallet_events_version ON wallet_events (aggregate_id, version);
+commit;
