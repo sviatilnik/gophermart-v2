@@ -30,7 +30,6 @@ import (
 	orderInfrastructure "github.com/sviatilnik/gophermart/internal/infrastructure/persistence/order"
 	"github.com/sviatilnik/gophermart/internal/infrastructure/persistence/user"
 	walletInfrastructure "github.com/sviatilnik/gophermart/internal/infrastructure/persistence/wallet"
-	accrual3 "github.com/sviatilnik/gophermart/internal/infrastructure/services/accrual"
 	"github.com/sviatilnik/gophermart/internal/infrastructure/services/jwt"
 	"go.uber.org/zap"
 )
@@ -48,6 +47,12 @@ func main() {
 		middleware.RequestID,
 		middleware.RealIP,
 	)
+
+	ctx, stop := signal.NotifyContext(context.Background(),
+		os.Interrupt,
+		syscall.SIGTERM,
+	)
+	defer stop()
 
 	eventBus := events.NewInMemoryEventBus(logger)
 
@@ -84,25 +89,19 @@ func main() {
 		authRouter.Get("/api/user/withdrawals", walletHandler.Withdrawals)
 
 		accrual := accrual2.NewService(
-			accrual3.NewHTTPClient(conf.AccrualSystemAddress),
+			conf.AccrualSystemAddress,
 			accRepo,
 			orderService,
 			eventBus,
 			logger)
 
-		go accrual.GetAccruals(context.Background())
+		go accrual.GetAccruals(ctx)
 	})
 
 	server := &http.Server{
 		Addr:    conf.Host,
 		Handler: r,
 	}
-
-	ctx, stop := signal.NotifyContext(context.Background(),
-		os.Interrupt,
-		syscall.SIGTERM,
-	)
-	defer stop()
 
 	go func() {
 		logger.Info(fmt.Sprintf("start server on %s", server.Addr))
