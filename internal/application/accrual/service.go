@@ -38,9 +38,8 @@ func NewService(url string, repository accrual.Repository, orderService *order.S
 }
 
 func (s *Service) GetAccruals(ctx context.Context) {
+	ticker := time.NewTicker(10 * time.Second)
 	for {
-		ticker := time.NewTicker(10 * time.Second)
-
 		select {
 		case <-ctx.Done():
 			s.logger.Info("accrual: service shutting down")
@@ -68,6 +67,7 @@ func (s *Service) GetAccruals(ctx context.Context) {
 
 			wg.Wait()
 			s.logger.Info("accrual: check done")
+			time.Sleep(1 * time.Second)
 		}
 	}
 }
