@@ -39,7 +39,7 @@ func NewService(url string, repository accrual.Repository, orderService *order.S
 
 func (s *Service) GetAccruals(ctx context.Context) {
 	for {
-		ticker := time.NewTicker(60 * time.Second)
+		ticker := time.NewTicker(10 * time.Second)
 
 		select {
 		case <-ctx.Done():
