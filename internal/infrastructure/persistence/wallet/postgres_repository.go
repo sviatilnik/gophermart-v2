@@ -5,10 +5,11 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"time"
+
 	"github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
 	"github.com/sviatilnik/gophermart/internal/domain/wallet"
-	"time"
 )
 
 var errUnknownEvent = errors.New("unknown event")
@@ -166,7 +167,7 @@ func (p *PostgresRepository) checkVersion(tx *sql.Tx, wlt *wallet.Wallet) (int, 
 	}
 
 	if m != wlt.Version()-len(wlt.Events()) {
-		return m, errVersionConflict
+		return m, wallet.ErrVersionConflict
 	}
 
 	return m, nil

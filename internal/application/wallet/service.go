@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	"github.com/sviatilnik/gophermart/internal/domain/events"
 	"github.com/sviatilnik/gophermart/internal/domain/order"
 	"github.com/sviatilnik/gophermart/internal/domain/wallet"
@@ -83,34 +84,42 @@ func (s *Service) Deposit(ctx context.Context, customerID string, amount float64
 }
 
 func (s *Service) Withdraw(ctx context.Context, customerID string, orderNumber string, amount float64) error {
-	wallt, err := s.repo.Load(ctx, customerID)
-	if err != nil {
-		return err
-	}
-
-	cmd, err := wallet.NewWithdrawCommand(customerID, orderNumber, amount)
-	if err != nil {
-		if errors.Is(err, order.ErrOrderNumberNotValid) {
-			return ErrOrderNumberNotValid
-		}
-		return err
-	}
-
-	err = wallt.HandleCommand(cmd)
-	if err != nil {
-		if errors.Is(err, wallet.ErrInsufficientFunds) {
-			return ErrNotEnoughFunds
+	// до 3 попыток в случае конфликта версий
+	for range 3 {
+		wallt, err := s.repo.Load(ctx, customerID)
+		if err != nil {
+			return err
 		}
 
-		return err
+		cmd, err := wallet.NewWithdrawCommand(customerID, orderNumber, amount)
+		if err != nil {
+			if errors.Is(err, order.ErrOrderNumberNotValid) {
+				return ErrOrderNumberNotValid
+			}
+			return err
+		}
+
+		err = wallt.HandleCommand(cmd)
+		if err != nil {
+			if errors.Is(err, wallet.ErrInsufficientFunds) {
+				return ErrNotEnoughFunds
+			}
+
+			return err
+		}
+
+		err = s.repo.Store(ctx, wallt)
+		if err == nil {
+			return nil
+		}
+
+		if !errors.Is(err, wallet.ErrVersionConflict) {
+			return err
+		}
+		// произошел конфликт версий - загружаем кошелек заново и пробуем списать повторно
 	}
 
-	err = s.repo.Store(ctx, wallt)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return wallet.ErrVersionConflict
 }
 
 func (s *Service) GetWithdraws(ctx context.Context, customerID string) ([]*Withdraw, error) {
