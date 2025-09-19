@@ -1,6 +1,7 @@
 package accrual
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"sync"
@@ -53,13 +54,24 @@ func (rl *RateLimiter) ShouldStop() bool {
 	return rl.rateLimitActive
 }
 
-func (rl *RateLimiter) WaitIfNeeded() {
+func (rl *RateLimiter) WaitIfNeeded(ctx context.Context) {
 	rl.mu.Lock()
 	if rl.rateLimitActive {
 		retryAfter := rl.retryAfter
 		rl.mu.Unlock()
 
-		time.Sleep(retryAfter)
+		timer := time.NewTimer(retryAfter)
+		select {
+		case <-timer.C:
+		case <-ctx.Done():
+		}
+
+		if !timer.Stop() {
+			select {
+			case <-timer.C:
+			default:
+			}
+		}
 
 		rl.mu.Lock()
 		rl.rateLimitActive = false

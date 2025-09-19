@@ -86,7 +86,7 @@ func (s *Service) Worker(ctx context.Context, o *order.OrderDTO, rl *RateLimiter
 			return
 		default:
 			if rl.ShouldStop() {
-				rl.WaitIfNeeded()
+				rl.WaitIfNeeded(ctx)
 				continue
 			}
 
@@ -104,7 +104,7 @@ func (s *Service) Worker(ctx context.Context, o *order.OrderDTO, rl *RateLimiter
 
 			if rl.HandleResponse(resp) {
 				resp.Body.Close()
-				rl.WaitIfNeeded()
+				rl.WaitIfNeeded(ctx)
 				continue
 			}
 
