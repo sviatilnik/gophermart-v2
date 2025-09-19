@@ -23,3 +23,12 @@ git fetch template && git checkout template/master .github
 ```
 
 Затем добавьте полученные изменения в свой репозиторий.
+
+
+# Добавление миграции
+
+В приложении используется пакет migrate https://github.com/golang-migrate/migrate и CLI утилита migrate
+
+```bash
+migrate create -ext sql -dir internal/infrastructure/migrations -seq MY_MIGRATION_NAME
+```
